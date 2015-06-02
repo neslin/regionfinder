@@ -2,27 +2,34 @@ __author__ = 'neslin'
 # App to find russian region from license plate number
 
 
-import sys
+import bs4
+import re
+
+htmlFile = open('plates.html', 'rb')
+soup = bs4.BeautifulSoup(htmlFile)
+# search = str(input('Enter area code:'))
+search = '3123'
+table = soup.find('table', attrs={'class':'wikitable'})
+
+rows = []
+rowsDict = {}
 
 
-args = sys.argv
-found = False
+for row in table.findAll('tr'):
+    cells = []
+    for cell in row.findAll('td'):
+        text = re.sub(r'^0|(\[2\]|\(|\))','', cell.getText()) # Strip leading zeros and [2]
+        cells.append(text)
+        rows.append(cells)
 
-if len(args) > 2:
-    search = sys.argv[1]
-else:
-    search = input("Enter plate number:")
 
+for row in rows:
+    rowsDict[row[1]] = row[0]
 
-records = {'moscow': [77, 97, 99, 177, 197, 199, 777],
-           'st. petersburg': [78, 98, 178]
-
-           }
-
-for region, number in records.items():
-    if int(search) in number:
-        print("{} is from {}".format(search, region.title()))
-        found = True
-
-if not found:
-    print("Not found")
+for region, code in rowsDict.items():
+    # Try to match search string in the beginning, middle and end
+    m = re.search(r'(^{}$)|(^{}\D)|(\D{}\D)|(\D{}$)'.format(search, search, search, search), code)
+    if m:
+        print(m.group(), region)
+    else:
+        print("Not found")
